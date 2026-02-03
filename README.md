@@ -17,4 +17,5 @@ samples, guidance on mobile development, and a full API reference.
 
 https://valentine-for-her.web.app/#/?name=sonam&v=3
 
+flutter run -d chrome
 flutter clean && flutter build web --release && firebase deploy --only hosting
