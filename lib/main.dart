@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui'; // Provides ImageFilter
+
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'dart:html' as html;
 
 void main() => runApp(const MaterialApp(home: PremiumValentine(), debugShowCheckedModeBanner: false));
 
 class PremiumValentine extends StatefulWidget {
   const PremiumValentine({super.key});
+
   @override
   State<PremiumValentine> createState() => _PremiumValentineState();
 }
@@ -18,33 +22,40 @@ class _PremiumValentineState extends State<PremiumValentine> with TickerProvider
   String name = "Sweetheart";
   int hoverCount = 0;
 
+  // Inside your State class
+  final player = AudioPlayer();
+
   late AnimationController _rainController;
   final List<HeartPath> _heartRain = List.generate(40, (i) => HeartPath());
 
-  final List<String> guiltTexts = [
-    "No", "Are you sure?", "Pookie please...", "Don't be mean!",
-    "I'm crying..", "Broken heart :(", "Click the big YES!", "Give up!"
-  ];
+  final List<String> guiltTexts = ["No", "Are you sure?", "Pookie please...", "Don't be mean!", "I'm crying..", "Broken heart :(", "Click the big YES!", "Give up!"];
 
   @override
   void initState() {
     super.initState();
     _rainController = AnimationController(vsync: this, duration: const Duration(seconds: 3));
 
-    // Modern Cross-Platform URL Name Extractor
-    // Uri.base works on Web without needing dart:html
+    // High-compatibility URL parser
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final parameters = Uri.base.queryParameters;
-      if (parameters.containsKey('name')) {
-        setState(() => name = parameters['name']!);
+      final fullUrl = Uri.base.toString(); // Gets the entire string including hashes
+      if (fullUrl.contains("name=")) {
+        setState(() {
+          // Simple manual split to bypass Hash/Path strategy issues
+          name = fullUrl.split("name=").last.split("&").first;
+          // Decode URL encoding (e.g., %20 to space)
+          name = Uri.decodeComponent(name);
+        });
       }
     });
   }
 
-  void _onYes() {
+  FutureOr<void> _onYes() async {
     setState(() => isAccepted = true);
     _rainController.repeat();
-    _launchWhatsApp();
+
+    await player.setAsset('assets/audio/my_valentine_song.mpeg');
+    player.play();
+    Future.delayed(const Duration(seconds: 20), () => _launchWhatsApp());
   }
 
   void _launchWhatsApp() {
@@ -72,7 +83,10 @@ class _PremiumValentineState extends State<PremiumValentine> with TickerProvider
   Widget build(BuildContext context) {
     final s = MediaQuery.of(context).size;
     // Set initial button position
-    if (noTop == 0) { noTop = s.height * 0.7; noLeft = s.width * 0.5 + 40; }
+    if (noTop == 0) {
+      noTop = s.height * 0.7;
+      noLeft = s.width * 0.5 + 40;
+    }
 
     return Scaffold(
       body: Stack(
@@ -136,7 +150,8 @@ class _PremiumValentineState extends State<PremiumValentine> with TickerProvider
           if (!isAccepted)
             AnimatedPositioned(
               duration: const Duration(milliseconds: 150),
-              top: noTop, left: noLeft,
+              top: noTop,
+              left: noLeft,
               child: MouseRegion(
                 onEnter: (_) => _moveNo(),
                 child: ElevatedButton(
